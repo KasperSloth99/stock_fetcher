@@ -23,28 +23,25 @@ def get_tickers():
     tickers = yf.Tickers(stock_names_single_string)
     return (stock_names_split, tickers)
 
+[split_names, tickers] = get_tickers()
+
+def get_history(name):
+    history = tickers.tickers[name].history(period="1mo",actions=True)
+    if history.index.tz is not None:
+        history.index = history.index.tz_localize(None)
+    adjusted_history = history[['Open', 'High', 'Low', 'Close', 'Volume']]
+    adjusted_history.insert(0, 'Ticker', name)
+    return adjusted_history
+
 def fetch_stocks_to_excel():
-    [split_names, tickers] = get_tickers()
     with pd.ExcelWriter('stocks.xlsx', engine='xlsxwriter') as writer:
         for stock_name in split_names:
-            history = tickers.tickers[stock_name].history(period="1mo",actions=True)
-            if history.index.tz is not None:
-                history.index = history.index.tz_localize(None)
-            adjusted_history = history[['Open', 'High', 'Low', 'Close', 'Volume']]
-            adjusted_history.insert(0, 'Ticker', stock_name)
-            adjusted_history.to_excel(writer, sheet_name=stock_name, index=True)
+            get_history(stock_name).to_excel(writer, sheet_name=stock_name, index=True)
 
 def fetch_stocks_to_csv():
-    [split_names, tickers] = get_tickers()
     all_data = [] 
     for stock_name in split_names:
-        history = tickers.tickers[stock_name].history(period="1mo", actions=True)
-        if history.index.tz is not None:
-            history.index = history.index.tz_localize(None)
-        adjusted_history = history[['Open', 'High', 'Low', 'Close', 'Volume']]
-        adjusted_history.insert(0, 'Ticker', stock_name)
-        all_data.append(adjusted_history) 
-
+        all_data.append(get_history(stock_name)) 
     final_data = pd.concat(all_data)
     final_data.to_csv('stocks.csv', index=True)
 
